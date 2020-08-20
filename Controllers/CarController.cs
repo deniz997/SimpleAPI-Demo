@@ -1,18 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 using MySql.Data.MySqlClient;
 using web_api_crud.Models;
 
 namespace web_api_crud.Controllers
 {
+    [Route("api/[controller]")]
+    [ApiController]
     public class CarController : Controller
     {
-        string connString = "server=127.0.0.1;uid=root;pwd=Zoka.7991;database=sys";
+        private IConfiguration Configuration;
+        string connString;
+   
+        public CarController(IConfiguration _configuration)
+        {
+            Configuration = _configuration;
+            connString = this.Configuration.GetConnectionString("Default");
+
+        }
 
         public IActionResult Index()
         {
@@ -25,7 +32,7 @@ namespace web_api_crud.Controllers
             List<CarModel> carList = new List<CarModel>();
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
-                MySqlCommand comm = new MySqlCommand("SELECT id, num_doors, brand, model FROM cartable", conn);
+                MySqlCommand comm = new MySqlCommand("SELECT id, num_doors, brand, model FROM car_table", conn);
                 conn.Open();
 
                 MySqlDataReader reader = comm.ExecuteReader();
@@ -44,18 +51,18 @@ namespace web_api_crud.Controllers
             return carList;
         }
 
-        [HttpPost("/car/post/num_doors={num_doors}&brand={brand}&model={model}")]
-        public int PostCar(int num_doors, string brand, string model)
+        [HttpPost]
+        public int Post(CarModel car)
         {
             int numRowsAffected = 0;
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
-                MySqlDataAdapter adapter = new MySqlDataAdapter();
-                MySqlCommand comm = new MySqlCommand("INSERT INTO cartable (num_doors,brand, model) VALUES (@num_doors,@brand,@model)", conn);
+
+                MySqlCommand comm = new MySqlCommand("INSERT INTO car_table (num_doors,brand, model) VALUES (@num_doors,@brand,@model)", conn);
                 conn.Open();
-                comm.Parameters.AddWithValue("num_doors", num_doors);
-                comm.Parameters.AddWithValue("brand", brand);
-                comm.Parameters.AddWithValue("model", model);
+                comm.Parameters.AddWithValue("num_doors", car.num_doors);
+                comm.Parameters.AddWithValue("brand", car.brand);
+                comm.Parameters.AddWithValue("model", car.model);
                 numRowsAffected = comm.ExecuteNonQuery();
                 conn.Close();
             }
@@ -63,43 +70,35 @@ namespace web_api_crud.Controllers
             return numRowsAffected;
         }
 
-        [HttpPut("car/update/id={id}&num_doors={num_doors}&brand={brand}&model={model}")]
-        public CarModel Update(int id, int num_doors, string brand, string model)
+        [HttpPut]
+        public CarModel Update(CarModel car)
         {
-            CarModel updatedCarValues = new CarModel();
 
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 MySqlDataAdapter adapter = new MySqlDataAdapter();
-                MySqlCommand comm = new MySqlCommand("UPDATE cartable SET num_doors=@num_doors, brand=@brand, model=@model WHERE id=@id", conn);
+                MySqlCommand comm = new MySqlCommand("UPDATE car_table SET num_doors=@num_doors, brand=@brand, model=@model WHERE id=@id", conn);
                 conn.Open();
 
-                updatedCarValues.id = id;
-                comm.Parameters.AddWithValue("id", id);
-
-                updatedCarValues.brand = brand;
-                comm.Parameters.AddWithValue("brand", brand);
-
-                updatedCarValues.model = model;
-                comm.Parameters.AddWithValue("model", model);
-
-                updatedCarValues.num_doors = num_doors;
-                comm.Parameters.AddWithValue("num_doors", num_doors);
+                comm.Parameters.AddWithValue("id", car.id);
+                comm.Parameters.AddWithValue("brand", car.brand);
+                comm.Parameters.AddWithValue("model", car.model);
+                comm.Parameters.AddWithValue("num_doors", car.num_doors);
 
                 comm.ExecuteNonQuery();
                 conn.Close();
             }
-            return updatedCarValues;
+            return car;
         }
 
-        [HttpGet("/car/get/{id}")]
+        [HttpGet("{id}")]
         public CarModel Get(int id)
         {
             CarModel carWithId = new CarModel();
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 MySqlDataAdapter adapter = new MySqlDataAdapter();
-                MySqlCommand comm = new MySqlCommand("SELECT id,num_doors, brand, model FROM cartable WHERE id=@id", conn);
+                MySqlCommand comm = new MySqlCommand("SELECT id,num_doors, brand, model FROM car_table WHERE id=@id", conn);
                 conn.Open();
                 comm.Parameters.AddWithValue("id", id);
 
@@ -117,14 +116,14 @@ namespace web_api_crud.Controllers
             return carWithId;
         }
 
-        [HttpDelete("/car/delete/{id}")]
+        [HttpDelete("{id}")]
         public CarModel Delete(int id)
         {
             CarModel carToDelete = new CarModel();
             using (MySqlConnection conn = new MySqlConnection(connString))
             {
                 MySqlDataAdapter adapter = new MySqlDataAdapter();
-                MySqlCommand comm = new MySqlCommand("DELETE FROM cartable WHERE id=@id", conn);
+                MySqlCommand comm = new MySqlCommand("DELETE FROM car_table WHERE id=@id", conn);
                 conn.Open();
                 comm.Parameters.AddWithValue("id", id);
                 carToDelete = Get(id);
